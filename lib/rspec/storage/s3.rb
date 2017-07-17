@@ -35,8 +35,12 @@ begin
           def close
             @tempfile.flush
             @tempfile.rewind
-            @s3_client.put_object(bucket: @bucket, key: @key, body: @tempfile)
-            @s3_client.wait_until(:object_exists, bucket: @bucket, key: @key) do |w|
+
+            require 'zlib'
+            deflate_str = StringIO.new(Zlib::Deflate.deflate(@tempfile.read))
+
+            @s3_client.put_object(bucket: @bucket, key: "#{@key}.gz", body: deflate_str)
+            @s3_client.wait_until(:object_exists, bucket: @bucket, key: "#{@key}.gz") do |w|
               w.max_attempts = 5
             end
             $stdout.puts "Upload to #{@uri.to_s}"
